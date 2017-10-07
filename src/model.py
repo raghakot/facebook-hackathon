@@ -83,6 +83,47 @@ def build_with_seg_model(seg_model_path):
     # Create new model without flatten layer.
     main_model = Model(inputs=seg_model.input, outputs=seg_model.layers[-2].output)
     return main_model
+    
+def build_pre_train_model(run_id="",layer_name="max_pooling2d_4"):
+    #pretrained car detector
+    model_path = '../models/seg_{}.hdf5'.format(run_id)
+    inp = Input(shape=(IMG_HEIGHT, IMG_WIDTH, 3))
+
+    x = _conv_bn_elu(16, 3)(inp)
+    x = _conv_bn_elu(16, 3)(x)
+    x = MaxPooling2D()(x)
+
+    x = _conv_bn_elu(32, 3)(x)
+    x = _conv_bn_elu(32, 3)(x)
+    x = MaxPooling2D()(x)
+
+    x = _conv_bn_elu(32, 3)(x)
+    x = _conv_bn_elu(32, 3)(x)
+    x = MaxPooling2D()(x)
+
+    x = _conv_bn_elu(48, 3)(x)
+    x = _conv_bn_elu(48, 3)(x)
+    x = MaxPooling2D()(x)
+    model = Model(inp, x)
+
+    model.load_weights(filepath=model_path, by_name=True)
+
+    #for layer in model.layers: layer.trainable = False
+
+    x = model.output
+
+    # # Mask detection
+    x = Conv2D(1, 3, kernel_initializer='he_normal', padding='same', activation='sigmoid')(x)
+    #
+    # # Mask refinement
+    x = _conv_bn_elu(4, 3)(x)
+    x = _conv_bn_elu(4, 3)(x)
+    x = Conv2D(1, 3, kernel_initializer='he_normal', padding='same', activation='sigmoid')(x)
+    x = Lambda(lambda x: K.sum(x, axis=[1, 2]))(x)
+
+
+    return Model(inp, x)
+
 
 if __name__ == '__main__':
     model = build_with_seg_model('../models/seg_2017-10-07-12-03-33.hdf5')
