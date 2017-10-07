@@ -1,0 +1,9 @@
+# dev-env
+.idea/
+*.iml
+
+# data
+data/*
+
+*.pyc
+src/.ipynb_checkpoints
